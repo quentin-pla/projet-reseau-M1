@@ -37,15 +37,25 @@ public class VMUtils {
     }
 
     /**
+     * Récupérer les adresses IP associées à une VM
+     * @param vmName nom de la VM
+     * @return adresses
+     */
+    public static String[] getVMAddresses(String vmName) {
+        String addresses = execSSH(vmName, "hostname -I");
+        addresses = addresses.substring(addresses.indexOf(' ') + 1, addresses.length() - 1);
+        return addresses.split(" ");
+    }
+
+    /**
      * Exécuter une série de commandes en SSH sur la VM
      * @param vmName nom de la VM
      */
-    public static void execSSH(String vmName, String[] commands) {
-        StringBuilder sshCommand = new StringBuilder("vagrant ssh " + getVMId(vmName) + " << END\n");
+    public static String execSSH(String vmName, String... commands) {
+        String sshCommand = "vagrant ssh " + getVMId(vmName) + " -c \"";
         for (String command : commands)
-            sshCommand.append(command).append("\n");
-        sshCommand.append("logout\n").append("END");
-        System.out.println(sshCommand);
-        Command.execCommand(sshCommand.toString());
+            sshCommand = sshCommand.concat(command + ";");
+        sshCommand = sshCommand.concat("\"");
+        return Command.execCommand(sshCommand);
     }
 }
