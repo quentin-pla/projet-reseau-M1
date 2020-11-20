@@ -48,6 +48,12 @@ public class Tunnel {
      * @param args arguments
      */
     public static void main(String[] args) {
-        createTunnel6to4("VM1","VM3","tun0","fc00:1234:ffff::1/64");
+        if (args.length == 4) {
+            createTunnel6to4("VM1", "VM3", "tun0", "fc00:1234:ffff::1/64");
+        } else {
+            System.err.println("ERREUR : Nombre d'arguments invalide.");
+            System.out.println("Utilisation: {nom machine virtuelle n°1} {nom machine virtuelle n°2} {nom interface tunnel} {adresse ip associée au tunnel}");
+            System.exit(1);
+        }
     }
 }
