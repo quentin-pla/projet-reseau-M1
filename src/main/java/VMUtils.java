@@ -1,13 +1,33 @@
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.*;
 
 /**
  * Utilitaire machines virtuelles vagrant
  */
 public class VMUtils {
     /**
+     * Réservoir de threads
+     */
+    private static final ExecutorService executor = Executors.newFixedThreadPool(4);
+
+    /**
+     * Service de complétion
+     */
+    private static final CompletionService<Void> service = new ExecutorCompletionService<>(executor);
+
+    /**
+     * Liste des taches en cours
+     */
+    private static final CopyOnWriteArrayList<Future<Void>> tasks = new CopyOnWriteArrayList<>();
+
+    /**
      * Obtenir le status de chaque VM initialisée
      */
     public static void getVMsStatus() {
+        System.out.println("Récupération du status global vagrant...");
         ArrayList<String> status = Command.execCommand("vagrant global-status");
         if (status != null) {
             for (VM vm : VM.getVMs()) {
@@ -28,6 +48,7 @@ public class VMUtils {
                     System.err.println("ERREUR : Machine " + vm.getName() + " éteinte. Veuillez la démarrer.");
                     System.exit(1);
                 }
+                System.out.println("Initialisation du status de " + vm.getName() + " terminée.");
             }
         } else {
             System.err.println("ERREUR : Status des machines irrécupérable.");
@@ -41,31 +62,40 @@ public class VMUtils {
     public static void getVMsAddresses() {
         Map<String, Map<String,ArrayList<String>>> sshCommands = new HashMap<>();
         for (VM vm : VM.getVMs()) {
-            if (vm.getId() == null) {
-                System.err.println("ERREUR : ID de " + vm.getName() + " non définit.");
-                System.exit(1);
-            }
-            //Exécution et récupération des sorties commandes
-            String[] commandsToRun = new String[]{"hostname -I", "ip r","ip -6 r"};
-            sshCommands.put(vm.getName(), execSSH(vm, commandsToRun));
-            //Liste des adresses IP récupérées par hostname
-            String addresses = sshCommands.get(vm.getName()).get(commandsToRun[0]).get(0);
-            //Suppression de la première adresse étant réservée à vagrant
-            addresses = addresses.substring(addresses.indexOf(' ') + 1, addresses.length() - 1);
-            //Association des adresses avec leur adresse réseau à la VM
-            for (String ipAddress : addresses.split(" ")) {
-                if (Network.checkIPv4(ipAddress)) {
-                    for (String route : sshCommands.get(vm.getName()).get(commandsToRun[1]))
-                        if (route.contains("proto kernel  scope link  src " + ipAddress))
-                            vm.getIpv4Addresses().put(ipAddress, route.substring(0, route.indexOf(' ')));
+            tasks.add(service.submit(() -> {
+                if (vm.getId() == null) {
+                    System.err.println("ERREUR : ID de " + vm.getName() + " non définit.");
+                    System.exit(1);
                 }
-                else if (Network.checkIPv6(ipAddress)) {
-                    for (String route : sshCommands.get(vm.getName()).get(commandsToRun[2]))
-                        if (route.contains("proto kernel") && route.contains(ipAddress.substring(0,ipAddress.indexOf("::"))))
-                            vm.getIpv6Addresses().put(ipAddress, route.substring(0, route.indexOf(' ')));
+                System.out.println("Récupération des adresses de " + vm.getName() + "...");
+                //Exécution et récupération des sorties commandes
+                String[] commandsToRun = new String[]{"hostname -I", "ip r","ip -6 r"};
+                sshCommands.put(vm.getName(), execSSH(vm, commandsToRun));
+                //Liste des adresses IP récupérées par hostname
+                String addresses = sshCommands.get(vm.getName()).get(commandsToRun[0]).get(0);
+                //Suppression de la première adresse étant réservée à vagrant
+                addresses = addresses.substring(addresses.indexOf(' ') + 1, addresses.length() - 1);
+                //Association des adresses avec leur adresse réseau à la VM
+                for (String ipAddress : addresses.split(" ")) {
+                    if (Network.checkIPv4(ipAddress)) {
+                        for (String route : sshCommands.get(vm.getName()).get(commandsToRun[1]))
+                            if (route.contains("proto kernel  scope link  src " + ipAddress))
+                                vm.getIpv4Addresses().put(ipAddress, route.substring(0, route.indexOf(' ')));
+                    }
+                    else if (Network.checkIPv6(ipAddress)) {
+                        for (String route : sshCommands.get(vm.getName()).get(commandsToRun[2]))
+                            if (route.contains("proto kernel") && route.contains(ipAddress.substring(0,ipAddress.indexOf("::"))))
+                                vm.getIpv6Addresses().put(ipAddress, route.substring(0, route.indexOf(' ')));
+                    }
                 }
-            }
+                System.out.println("Initialisation des adresses de " + vm.getName() + " terminée.");
+            }, null));
         }
+        // Tant qu'il reste des tâches à effectuer
+        while (!tasks.isEmpty())
+            tasks.removeIf(Future::isDone);
+        // Extinction de l'exécuteur
+        executor.shutdown();
     }
 
     /**
