@@ -11,7 +11,7 @@ public class VMUtils {
     /**
      * Réservoir de threads
      */
-    private static final ExecutorService executor = Executors.newFixedThreadPool(4);
+    private static ExecutorService executor = Executors.newFixedThreadPool(4);
 
     /**
      * Service de complétion
@@ -62,7 +62,7 @@ public class VMUtils {
     public static void getVMsAddresses() {
         Map<String, Map<String,ArrayList<String>>> sshCommands = new HashMap<>();
         for (VM vm : VM.getVMs()) {
-            tasks.add(service.submit(() -> {
+            execParallelTask(() -> {
                 if (vm.getId() == null) {
                     System.err.println("ERREUR : ID de " + vm.getName() + " non définit.");
                     System.exit(1);
@@ -79,23 +79,23 @@ public class VMUtils {
                 for (String ipAddress : addresses.split(" ")) {
                     if (Network.checkIPv4(ipAddress)) {
                         for (String route : sshCommands.get(vm.getName()).get(commandsToRun[1]))
-                            if (route.contains("proto kernel  scope link  src " + ipAddress))
-                                vm.getIpv4Addresses().put(ipAddress, route.substring(0, route.indexOf(' ')));
+                            if (route.contains("proto kernel  scope link  src " + ipAddress)) {
+                                vm.getIpv4Addresses().add(ipAddress);
+                                vm.getIpv4NetworkAddresses().add(route.substring(0, route.indexOf(' ')));
+                            }
                     }
                     else if (Network.checkIPv6(ipAddress)) {
                         for (String route : sshCommands.get(vm.getName()).get(commandsToRun[2]))
-                            if (route.contains("proto kernel") && route.contains(ipAddress.substring(0,ipAddress.indexOf("::"))))
-                                vm.getIpv6Addresses().put(ipAddress, route.substring(0, route.indexOf(' ')));
+                            if (route.contains("proto kernel") && route.contains(ipAddress.substring(0,ipAddress.indexOf("::")))) {
+                                vm.getIpv6Addresses().add(ipAddress);
+                                vm.getIpv6NetworkAddresses().add(route.substring(0, route.indexOf(' ')));
+                            }
                     }
                 }
                 System.out.println("Initialisation des adresses de " + vm.getName() + " terminée.");
-            }, null));
+            });
         }
-        // Tant qu'il reste des tâches à effectuer
-        while (!tasks.isEmpty())
-            tasks.removeIf(Future::isDone);
-        // Extinction de l'exécuteur
-        executor.shutdown();
+        waitTasksToFinish();
     }
 
     /**
@@ -121,5 +121,24 @@ public class VMUtils {
             else commandsOutput.get(commands[commandNumber]).add(output);
         }
         return commandsOutput;
+    }
+
+    /**
+     * Exécuter une tâche de manière parallèle
+     * @param runnable exécutable
+     */
+    public static void execParallelTask(Runnable runnable) {
+        if (executor.isShutdown())
+            executor = Executors.newFixedThreadPool(4);
+        tasks.add(service.submit(runnable,null));
+    }
+
+    /**
+     * Attendre que les tâches en cours se terminent
+     */
+    public static void waitTasksToFinish() {
+        while (!tasks.isEmpty())
+            tasks.removeIf(Future::isDone);
+        executor.shutdown();
     }
 }
