@@ -12,8 +12,7 @@ public class Command {
      * @param command commande
      */
     public static ArrayList<String> execCommand(String command) {
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        processBuilder.command("bash", "-c", command);
+        ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", command);
         try {
             Process process = processBuilder.start();
             ArrayList<String> output = new ArrayList<>();
