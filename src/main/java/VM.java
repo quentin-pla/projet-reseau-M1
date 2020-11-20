@@ -1,6 +1,4 @@
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Machine virtuelle Vagrant
@@ -14,12 +12,22 @@ public class VM {
     /**
      * Liste des adresses IPv4 associées à la machine
      */
-    private final Map<String,String> ipv4Addresses = new HashMap<>();
+    private final ArrayList<String> ipv4Addresses = new ArrayList<>();
+
+    /**
+     * Liste des adresses réseaux IPv4 associées à la machine
+     */
+    private final ArrayList<String> ipv4NetworkAddresses = new ArrayList<>();
 
     /**
      * Liste des adresses IPv6 associées à la machine
      */
-    private final Map<String,String> ipv6Addresses = new HashMap<>();
+    private final ArrayList<String> ipv6Addresses = new ArrayList<>();
+
+    /**
+     * Liste des adresses réseaux IPv6 associées à la machine
+     */
+    private final ArrayList<String> ipv6NetworkAddresses = new ArrayList<>();
 
     /**
      * Nom de la machine
@@ -83,11 +91,11 @@ public class VM {
         isTurnedOn = turnedOn;
     }
 
-    public Map<String, String> getIpv4Addresses() {
-        return ipv4Addresses;
-    }
+    public ArrayList<String> getIpv4Addresses() { return ipv4Addresses; }
 
-    public Map<String, String> getIpv6Addresses() {
-        return ipv6Addresses;
-    }
+    public ArrayList<String> getIpv4NetworkAddresses() { return ipv4NetworkAddresses; }
+
+    public ArrayList<String> getIpv6Addresses() { return ipv6Addresses; }
+
+    public ArrayList<String> getIpv6NetworkAddresses() { return ipv6NetworkAddresses; }
 }
