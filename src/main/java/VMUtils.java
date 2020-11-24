@@ -32,7 +32,7 @@ public class VMUtils {
      * Obtenir le status de chaque VM initialisée
      */
     public static void getVMsStatus() {
-        System.out.println("Récupération du status global vagrant...");
+        System.out.println("Récupération du status global vagrant...\r");
         ArrayList<String> status = Command.execCommand("vagrant global-status");
         if (status != null) {
             for (VM vm : vms) {
@@ -46,17 +46,17 @@ public class VMUtils {
                     }
                 }
                 if (!vm.checkStatus()) {
-                    System.err.println("ERREUR : Machine " + vm.getName() + " introuvable.");
+                    System.err.println("ERREUR : Machine " + vm.getName() + " introuvable.\r");
                     System.exit(1);
                 }
                 if (!vm.isTurnedOn()) {
-                    System.err.println("ERREUR : Machine " + vm.getName() + " éteinte. Veuillez la démarrer.");
+                    System.err.println("ERREUR : Machine " + vm.getName() + " éteinte. Veuillez la démarrer.\r");
                     System.exit(1);
                 }
-                System.out.println("Initialisation du status de " + vm.getName() + " terminée.");
+                System.out.println("Initialisation du status de " + vm.getName() + " terminée.\r");
             }
         } else {
-            System.err.println("ERREUR : Status des machines irrécupérable.");
+            System.err.println("ERREUR : Status des machines irrécupérable.\r");
             System.exit(1);
         }
     }
@@ -69,10 +69,10 @@ public class VMUtils {
         for (VM vm : vms) {
             execParallelTask(() -> {
                 if (vm.getId() == null) {
-                    System.err.println("ERREUR : ID de " + vm.getName() + " non définit.");
+                    System.err.println("ERREUR : ID de " + vm.getName() + " non défini.\r");
                     System.exit(1);
                 }
-                System.out.println("Récupération des adresses de " + vm.getName() + "...");
+                System.out.println("Récupération des adresses de " + vm.getName() + "...\r");
                 //Exécution et récupération des sorties commandes
                 String[] commandsToRun = new String[]{"hostname -I", "ip r","ip -6 r"};
                 sshCommands.put(vm.getName(), execSSH(vm, commandsToRun));
@@ -97,7 +97,7 @@ public class VMUtils {
                             }
                     }
                 }
-                System.out.println("Initialisation des adresses de " + vm.getName() + " terminée.");
+                System.out.println("Initialisation des adresses de " + vm.getName() + " terminée.\r");
             });
         }
         waitTasksToFinish();
@@ -109,7 +109,7 @@ public class VMUtils {
      */
     public static Map<String,ArrayList<String>> execSSH(VM vm, String... commands) {
         if (vm.getId() == null) {
-            System.err.println("ERREUR : ID de " + vm.getName() + " irrécupérable.");
+            System.err.println("ERREUR : ID de " + vm.getName() + " irrécupérable.\r");
             System.exit(1);
         }
         String sshCommand = "vagrant ssh " + vm.getId() + " -c \"";
