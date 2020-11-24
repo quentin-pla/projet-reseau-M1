@@ -3,28 +3,56 @@
  */
 public class Tunnel {
     /**
-     * Créer un tunnel IPv6->IPv4
-     * @param vm1Name nom de la VM n°1
-     * @param vm2Name nom de la VM n°2
-     * @param intName nom de l'interface
-     * @param intAddress adresse IP de l'interface
+     * Machine virtuelle n°1
      */
-    public static void createTunnel6to4(String vm1Name, String vm2Name, String intName, String intAddress) {
-        //Instantiation des VMs
-        VM vm1 = new VM(vm1Name);
-        VM vm2 = new VM(vm2Name);
+    private final VM vm1;
+
+    /**
+     * Machine virtuelle n°2
+     */
+    private final VM vm2;
+
+    /**
+     * Nom de l'interface du tunnel
+     */
+    private final String intName;
+
+    /**
+     * Adresse de l'interface du tunnel
+     */
+    private final String intAddress;
+
+    /**
+     * Constructeur
+     * @param vm1Name nom de la machine virtuelle n°1
+     * @param vm2Name nom de la machine virtuelle n°2
+     * @param intName nom de l'interface
+     * @param intAddress adresse de l'interface
+     */
+    public Tunnel(String vm1Name, String vm2Name, String intName, String intAddress) {
+        this.vm1 = new VM(vm1Name);
+        this.vm2 = new VM(vm2Name);
+        this.intName = intName;
+        this.intAddress = intAddress;
+        initTunnel();
+    }
+
+    /**
+     * Initialisation du tunnel IPv6->IPv4
+     */
+    private void initTunnel() {
         //Récupération de l'état des machines
         VMUtils.getVMsStatus();
         //Récupération des adresses ip des machines
         VMUtils.getVMsAddresses();
         //Vérification des adresses pour la VM n°1
         if (vm1.getIpv4Addresses().isEmpty() || vm1.getIpv6Addresses().isEmpty()) {
-            System.err.println("ERREUR : " + vm1Name + " ne dispose pas de deux interfaces comprenant une adresse IPv4 et une adresse IPv6.");
+            System.err.println("ERREUR : " + vm1.getName() + " ne dispose pas de deux interfaces comprenant une adresse IPv4 et une adresse IPv6.");
             System.exit(1);
         }
         //Vérification des adresses pour la VM n°2
         if (vm2.getIpv4Addresses().isEmpty() || vm2.getIpv6Addresses().isEmpty()) {
-            System.err.println("ERREUR : " + vm2Name + " ne dispose pas de deux interfaces comprenant une adresse IPv4 et une adresse IPv6.");
+            System.err.println("ERREUR : " + vm2.getName() + " ne dispose pas de deux interfaces comprenant une adresse IPv4 et une adresse IPv6.");
             System.exit(1);
         }
         //Création du tunnel sur la VM n°1
@@ -42,20 +70,6 @@ public class Tunnel {
         //On attend que les tunnels soient créés
         VMUtils.waitTasksToFinish();
         //Message de succès
-        System.out.println("Tunnel créé avec succès.");
-    }
-
-    /**
-     * Main
-     * @param args arguments
-     */
-    public static void main(String[] args) {
-        if (args.length == 4) {
-            createTunnel6to4(args[0], args[1], args[2], args[3]);
-        } else {
-            System.err.println("ERREUR : Nombre d'arguments invalide.");
-            System.out.println("Utilisation: {nom machine virtuelle n°1} {nom machine virtuelle n°2} {nom interface tunnel} {adresse ip associée au tunnel}");
-            System.exit(1);
-        }
+        System.out.println("Tunnel " + intName + " créé avec succès.");
     }
 }
