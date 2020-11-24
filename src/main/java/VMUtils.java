@@ -16,7 +16,7 @@ public class VMUtils {
     /**
      * Service de complétion
      */
-    private static final CompletionService<Void> service = new ExecutorCompletionService<>(executor);
+    private static CompletionService<Void> service = new ExecutorCompletionService<>(executor);
 
     /**
      * Liste des taches en cours
@@ -128,8 +128,10 @@ public class VMUtils {
      * @param runnable exécutable
      */
     public static void execParallelTask(Runnable runnable) {
-        if (executor.isShutdown())
+        if (executor.isShutdown()) {
             executor = Executors.newFixedThreadPool(4);
+            service = new ExecutorCompletionService<>(executor);
+        }
         tasks.add(service.submit(runnable,null));
     }
 

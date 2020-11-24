@@ -41,6 +41,8 @@ public class Tunnel {
             "sudo ip a add " + intAddress + " dev " + intName));
         //On attend que les tunnels soient créés
         VMUtils.waitTasksToFinish();
+        //Message de succès
+        System.out.println("Tunnel créé avec succès.");
     }
 
     /**
@@ -49,7 +51,7 @@ public class Tunnel {
      */
     public static void main(String[] args) {
         if (args.length == 4) {
-            createTunnel6to4("VM1", "VM3", "tun0", "fc00:1234:ffff::1/64");
+            createTunnel6to4(args[0], args[1], args[2], args[3]);
         } else {
             System.err.println("ERREUR : Nombre d'arguments invalide.");
             System.out.println("Utilisation: {nom machine virtuelle n°1} {nom machine virtuelle n°2} {nom interface tunnel} {adresse ip associée au tunnel}");
