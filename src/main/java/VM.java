@@ -5,11 +5,6 @@ import java.util.ArrayList;
  */
 public class VM {
     /**
-     * Liste des VMs instanciées
-     */
-    private static final ArrayList<VM> VMs = new ArrayList<>();
-
-    /**
      * Liste des adresses IPv4 associées à la machine
      */
     private final ArrayList<String> ipv4Addresses = new ArrayList<>();
@@ -50,7 +45,7 @@ public class VM {
      */
     public VM(String name) {
         this.name = name;
-        VMs.add(this);
+        VMUtils.getVms().add(this);
     }
 
     /**
@@ -62,10 +57,6 @@ public class VM {
     }
 
     // GETTERS & SETTERS //
-
-    public static ArrayList<VM> getVMs() {
-        return VMs;
-    }
 
     public String getName() {
         return name;

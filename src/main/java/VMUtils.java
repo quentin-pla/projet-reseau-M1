@@ -9,6 +9,11 @@ import java.util.concurrent.*;
  */
 public class VMUtils {
     /**
+     * Liste des VMs instanciées
+     */
+    private static final ArrayList<VM> vms = new ArrayList<>();
+
+    /**
      * Réservoir de threads
      */
     private static ExecutorService executor = Executors.newFixedThreadPool(4);
@@ -30,7 +35,7 @@ public class VMUtils {
         System.out.println("Récupération du status global vagrant...");
         ArrayList<String> status = Command.execCommand("vagrant global-status");
         if (status != null) {
-            for (VM vm : VM.getVMs()) {
+            for (VM vm : vms) {
                 for (String output : status) {
                     if (output.contains(vm.getName() + " ")) {
                         vm.setId(output.substring(0, output.indexOf(' ')));
@@ -61,7 +66,7 @@ public class VMUtils {
      */
     public static void getVMsAddresses() {
         Map<String, Map<String,ArrayList<String>>> sshCommands = new HashMap<>();
-        for (VM vm : VM.getVMs()) {
+        for (VM vm : vms) {
             execParallelTask(() -> {
                 if (vm.getId() == null) {
                     System.err.println("ERREUR : ID de " + vm.getName() + " non définit.");
@@ -142,5 +147,11 @@ public class VMUtils {
         while (!tasks.isEmpty())
             tasks.removeIf(Future::isDone);
         executor.shutdown();
+    }
+
+    // GETTERS //
+
+    public static ArrayList<VM> getVms() {
+        return vms;
     }
 }
