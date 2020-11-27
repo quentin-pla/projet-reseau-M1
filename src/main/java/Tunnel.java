@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 
 /**
  * Utilitaire Tunnel
@@ -38,7 +39,23 @@ public class Tunnel {
         this.vm2 = new VM(vm2Name);
         this.intName = intName;
         this.intAddress = intAddress;
+        checkArgs();
         initTunnel();
+    }
+
+    /**
+     * Vérifier les paramètres
+     */
+    private void checkArgs() {
+        String ipAddress = intAddress.substring(0,intAddress.indexOf('/'));
+        if (!Network.checkIPv4(ipAddress) && !Network.checkIPv6(ipAddress)) {
+            System.err.println("ERREUR : L'adresse IP du tunnel est invalide.");
+            System.exit(1);
+        }
+        if (!intName.matches("[A-Za-z0-9]+")) {
+            System.err.println("ERREUR : Le nom de l'interface du tunnel est invalide.");
+            System.exit(1);
+        }
     }
 
     /**
@@ -49,6 +66,7 @@ public class Tunnel {
         VMUtils.getVMsStatus();
         //Récupération des adresses ip des machines
         VMUtils.getVMsAddresses();
+
         //Vérification des adresses pour la VM n°1
         if (vm1.getIpv4Addresses().isEmpty() || vm1.getIpv6Addresses().isEmpty()) {
             System.err.println("ERREUR : " + vm1.getName() + " ne dispose pas de deux interfaces comprenant une adresse IPv4 et une adresse IPv6.\r");
@@ -59,6 +77,8 @@ public class Tunnel {
             System.err.println("ERREUR : " + vm2.getName() + " ne dispose pas de deux interfaces comprenant une adresse IPv4 et une adresse IPv6.\r");
             System.exit(1);
         }
+
+        System.out.println("Création du tunnel en cours...");
         //Création de la première extremité du tunnel sur la VM n°1
         VMUtils.execParallelTask(() -> VMUtils.execSSH(vm1,
             "sudo ip tun del " + intName,
@@ -75,8 +95,37 @@ public class Tunnel {
             "sudo ip a add " + intAddress + " dev " + intName));
         //On attend que les extremités du tunnel soient créées
         VMUtils.waitTasksToFinish();
-        //Message de succès
-        System.out.println("Tunnel " + intName + " créé avec succès.\r");
+        System.out.println("# Tunnel " + intName + " créé avec succès.\r");
+
+        System.out.println("Ajout des routes aux hôtes reliés au tunnel...");
+        //Récupération des hôtes liés à la première extrémité
+        ArrayList<VM> extremity1LinkedVMs = getNetworkVMsLinkedExtremity(vm1);
+        //Remplacement de la route pour passer par le tunnel
+        for (VM vm : extremity1LinkedVMs)
+            VMUtils.execParallelTask(() -> VMUtils.execSSH(vm,
+                    "sudo ip route replace " + vm2.getIpv6NetworkAddresses().get(0) + " via " + vm1.getIpv6Addresses().get(0)));
+        //Récupération des hôtes liés à la deuxième extrémité
+        ArrayList<VM> extremity2LinkedVMs = getNetworkVMsLinkedExtremity(vm2);
+        //Remplacement de la route pour passer par le tunnel
+        for (VM vm : extremity2LinkedVMs)
+            VMUtils.execParallelTask(() -> VMUtils.execSSH(vm,
+                    "sudo ip route replace " + vm1.getIpv6NetworkAddresses().get(0) + " via " + vm2.getIpv6Addresses().get(0)));
+        //On attend que les hôtes soient reliés
+        VMUtils.waitTasksToFinish();
+        System.out.println("Liaison des hôtes terminée.");
+    }
+
+    /**
+     * Obtenir les VMs liées à une extrémité du tunnel
+     * @return liste des hôtes reliés
+     */
+    public ArrayList<VM> getNetworkVMsLinkedExtremity(VM extremity) {
+        ArrayList<VM> linkedVMs = new ArrayList<>();
+        for (VM vm : VMUtils.getVms())
+            if (vm != extremity)
+                if (vm.getIpv6NetworkAddresses().contains(extremity.getIpv6NetworkAddresses().get(0)))
+                    linkedVMs.add(vm);
+        return linkedVMs;
     }
 
     /**

@@ -16,7 +16,7 @@ public class VMUtils {
     /**
      * Réservoir de threads
      */
-    private static ExecutorService executor = Executors.newFixedThreadPool(4);
+    private static ExecutorService executor = Executors.newFixedThreadPool(8);
 
     /**
      * Service de complétion
@@ -32,32 +32,63 @@ public class VMUtils {
      * Obtenir le status de chaque VM initialisée
      */
     public static void getVMsStatus() {
-        System.out.println("Récupération du status global vagrant...\r");
+        System.out.println("Récupération du status des machines en cours d'exécution...\r");
         ArrayList<String> status = Command.execCommand("vagrant global-status");
         if (status != null) {
-            for (VM vm : vms) {
-                for (String output : status) {
-                    if (output.contains(vm.getName() + " ")) {
-                        vm.setId(output.substring(0, output.indexOf(' ')));
-                        int beginIndexState = output.indexOf("virtualbox") + 11;
-                        String state = output.substring(beginIndexState, output.indexOf(' ', beginIndexState));
-                        vm.setTurnedOn(state.equals("running"));
-                        break;
-                    }
-                }
-                if (!vm.checkStatus()) {
-                    System.err.println("ERREUR : Machine " + vm.getName() + " introuvable.\r");
-                    System.exit(1);
-                }
-                if (!vm.isTurnedOn()) {
-                    System.err.println("ERREUR : Machine " + vm.getName() + " éteinte. Veuillez la démarrer.\r");
-                    System.exit(1);
-                }
-                System.out.println("Initialisation du status de " + vm.getName() + " terminée.\r");
-            }
+            initTunnelVms(status);
+            initNetworkVms(status);
+            System.out.println("# Machines actives sur le réseau: " + vms.size() + ".");
         } else {
             System.err.println("ERREUR : Status des machines irrécupérable.\r");
             System.exit(1);
+        }
+    }
+
+    /**
+     * Initialiser les machines extrémités du tunnel
+     * @param status status vagrant
+     */
+    private static void initTunnelVms(ArrayList<String> status) {
+        for (VM vm : vms) {
+            for (String output : status) {
+                if (output.contains(vm.getName() + " ")) {
+                    vm.setId(output.substring(0, output.indexOf(' ')));
+                    int beginIndexState = output.indexOf("virtualbox") + 11;
+                    String state = output.substring(beginIndexState, output.indexOf(' ', beginIndexState));
+                    vm.setTurnedOn(state.equals("running"));
+                    break;
+                }
+            }
+            if (!vm.checkStatus()) {
+                System.err.println("ERREUR : Machine " + vm.getName() + " introuvable.\r");
+                System.exit(1);
+            }
+            if (!vm.isTurnedOn()) {
+                System.err.println("ERREUR : Machine " + vm.getName() + " éteinte. Veuillez la démarrer.\r");
+                System.exit(1);
+            }
+        }
+    }
+
+    /**
+     * Initialiser les machines du réseau
+     * @param status status vagrant
+     */
+    private static void initNetworkVms(ArrayList<String> status) {
+        ArrayList<String> vmIds = new ArrayList<>();
+        for (VM vm : vms) vmIds.add(vm.getId());
+        for (String output : status) {
+            if (output.contains("running")) {
+                String vmId = output.substring(0, output.indexOf(' '));
+                String vmName = output.substring(output.lastIndexOf('/') + 1, output.indexOf(' ',
+                        output.lastIndexOf('/') + 1));
+                if (!vmIds.contains(vmId)) {
+                    vmIds.add(vmId);
+                    VM vm = new VM(vmName);
+                    vm.setId(vmId);
+                    vm.setTurnedOn(true);
+                }
+            }
         }
     }
 
@@ -97,7 +128,7 @@ public class VMUtils {
                             }
                     }
                 }
-                System.out.println("Initialisation des adresses de " + vm.getName() + " terminée.\r");
+                System.out.println("# Initialisation des adresses de " + vm.getName() + " terminée.\r");
             });
         }
         waitTasksToFinish();
