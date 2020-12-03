@@ -156,6 +156,8 @@ public class VMUtils {
     /**
      * Exécuter une série de commandes en SSH sur la VM
      * @param vm machine virtuelle
+     * @param commands liste des commandes
+     * @return liste des sorties pour chaque commande
      */
     public Map<String,ArrayList<String>> execSSH(VM vm, String... commands) {
         if (vm.getId() == null) {

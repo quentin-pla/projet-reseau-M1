@@ -10,6 +10,7 @@ public class Command {
     /**
      * Éxecuter une commande bash
      * @param command commande
+     * @return sorties des commandes
      */
     public static ArrayList<String> execCommand(String command) {
         ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", command);

@@ -122,6 +122,7 @@ public class Tunnel {
 
     /**
      * Obtenir les VMs liées à une extrémité du tunnel
+     * @param extremity machine virtuelle étant une extrémité du tunnel
      * @return liste des hôtes reliés
      */
     public ArrayList<VM> getNetworkVMsLinkedExtremity(VM extremity) {
