@@ -28,6 +28,11 @@ public class Tunnel {
     private final String intAddress;
 
     /**
+     * Utilitaire VMs
+     */
+    private static final VMUtils vmUtils = VMUtils.getInstance();
+
+    /**
      * Constructeur
      * @param vm1Name nom de la machine virtuelle n°1
      * @param vm2Name nom de la machine virtuelle n°2
@@ -63,9 +68,9 @@ public class Tunnel {
      */
     private void initTunnel() {
         //Récupération de l'état des machines
-        VMUtils.getVMsStatus();
+        vmUtils.getVMsStatus();
         //Récupération des adresses ip des machines
-        VMUtils.getVMsAddresses();
+        vmUtils.getVMsAddresses();
 
         //Vérification des adresses pour la VM n°1
         if (vm1.getIpv4Addresses().isEmpty() || vm1.getIpv6Addresses().isEmpty()) {
@@ -80,21 +85,21 @@ public class Tunnel {
 
         System.out.println("Création du tunnel en cours...");
         //Création de la première extremité du tunnel sur la VM n°1
-        VMUtils.execParallelTask(() -> VMUtils.execSSH(vm1,
+        vmUtils.execParallelTask(() -> vmUtils.execSSH(vm1,
             "sudo ip tun del " + intName,
             "sudo ip tun add " + intName + " mode sit remote " + vm2.getIpv4Addresses().get(0) + " local " + vm1.getIpv4Addresses().get(0),
             "sudo ip link set dev " + intName + " up",
             "sudo ip -6 route add " + vm2.getIpv6NetworkAddresses().get(0) + " dev " + intName + " metric 1",
             "sudo ip a add " + intAddress + " dev " + intName));
         //Création de la seconde extremité du tunnel sur la VM n°2
-        VMUtils.execParallelTask(() -> VMUtils.execSSH(vm2,
+        vmUtils.execParallelTask(() -> vmUtils.execSSH(vm2,
             "sudo ip tun del " + intName,
             "sudo ip tun add " + intName + " mode sit remote " + vm1.getIpv4Addresses().get(0) + " local " + vm2.getIpv4Addresses().get(0),
             "sudo ip link set dev " + intName + " up",
             "sudo ip -6 route add " + vm1.getIpv6NetworkAddresses().get(0) + " dev " + intName + " metric 1",
             "sudo ip a add " + intAddress + " dev " + intName));
         //On attend que les extremités du tunnel soient créées
-        VMUtils.waitTasksToFinish();
+        vmUtils.waitTasksToFinish();
         System.out.println("# Tunnel " + intName + " créé avec succès.\r");
 
         System.out.println("Ajout des routes aux hôtes reliés au tunnel...");
@@ -102,16 +107,16 @@ public class Tunnel {
         ArrayList<VM> extremity1LinkedVMs = getNetworkVMsLinkedExtremity(vm1);
         //Remplacement de la route pour passer par le tunnel
         for (VM vm : extremity1LinkedVMs)
-            VMUtils.execParallelTask(() -> VMUtils.execSSH(vm,
+            vmUtils.execParallelTask(() -> vmUtils.execSSH(vm,
                     "sudo ip route replace " + vm2.getIpv6NetworkAddresses().get(0) + " via " + vm1.getIpv6Addresses().get(0)));
         //Récupération des hôtes liés à la deuxième extrémité
         ArrayList<VM> extremity2LinkedVMs = getNetworkVMsLinkedExtremity(vm2);
         //Remplacement de la route pour passer par le tunnel
         for (VM vm : extremity2LinkedVMs)
-            VMUtils.execParallelTask(() -> VMUtils.execSSH(vm,
+            vmUtils.execParallelTask(() -> vmUtils.execSSH(vm,
                     "sudo ip route replace " + vm1.getIpv6NetworkAddresses().get(0) + " via " + vm2.getIpv6Addresses().get(0)));
         //On attend que les hôtes soient reliés
-        VMUtils.waitTasksToFinish();
+        vmUtils.waitTasksToFinish();
         System.out.println("Liaison des hôtes terminée.");
     }
 
@@ -121,7 +126,7 @@ public class Tunnel {
      */
     public ArrayList<VM> getNetworkVMsLinkedExtremity(VM extremity) {
         ArrayList<VM> linkedVMs = new ArrayList<>();
-        for (VM vm : VMUtils.getVms())
+        for (VM vm : vmUtils.getVms())
             if (vm != extremity)
                 if (vm.getIpv6NetworkAddresses().contains(extremity.getIpv6NetworkAddresses().get(0)))
                     linkedVMs.add(vm);
@@ -132,8 +137,8 @@ public class Tunnel {
      * Lire les paquets du tunnel depuis les deux extrémités
      */
     public void readPacketsFromTunnel() {
-        VMUtils.execParallelTask(() -> readPacketsFromExtremity(vm1));
-        VMUtils.execParallelTask(() -> readPacketsFromExtremity(vm2));
+        vmUtils.execParallelTask(() -> readPacketsFromExtremity(vm1));
+        vmUtils.execParallelTask(() -> readPacketsFromExtremity(vm2));
     }
 
     /**

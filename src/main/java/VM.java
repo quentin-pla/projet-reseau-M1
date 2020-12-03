@@ -45,7 +45,7 @@ public class VM {
      */
     public VM(String name) {
         this.name = name;
-        VMUtils.getVms().add(this);
+        VMUtils.getInstance().getVms().add(this);
     }
 
     /**

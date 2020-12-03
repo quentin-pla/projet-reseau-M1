@@ -11,27 +11,46 @@ public class VMUtils {
     /**
      * Liste des VMs instanciées
      */
-    private static final ArrayList<VM> vms = new ArrayList<>();
+    private final ArrayList<VM> vms = new ArrayList<>();
 
     /**
-     * Réservoir de threads
+     * Réservoir de 8 threads
      */
-    private static ExecutorService executor = Executors.newFixedThreadPool(8);
+    private ExecutorService executor = Executors.newFixedThreadPool(8);
 
     /**
      * Service de complétion
      */
-    private static CompletionService<Void> service = new ExecutorCompletionService<>(executor);
+    private CompletionService<Void> service = new ExecutorCompletionService<>(executor);
 
     /**
-     * Liste des taches en cours
+     * Liste des tâches en cours
      */
-    private static final CopyOnWriteArrayList<Future<Void>> tasks = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Future<Void>> tasks = new CopyOnWriteArrayList<>();
 
     /**
-     * Obtenir le status de chaque VM initialisée
+     * Instance unique
      */
-    public static void getVMsStatus() {
+    private static VMUtils instance;
+
+    /**
+     * Constructeur privé
+     */
+    private VMUtils() {}
+
+    /**
+     * Récupérer l'instance unique
+     * @return instance
+     */
+    public static VMUtils getInstance() {
+        if (instance == null) instance = new VMUtils();
+        return instance;
+    }
+
+    /**
+     * Obtenir le status de chaque VM en cours d'exécution
+     */
+    public void getVMsStatus() {
         System.out.println("Récupération du status des machines en cours d'exécution...\r");
         ArrayList<String> status = Command.execCommand("vagrant global-status");
         if (status != null) {
@@ -48,7 +67,7 @@ public class VMUtils {
      * Initialiser les machines extrémités du tunnel
      * @param status status vagrant
      */
-    private static void initTunnelVms(ArrayList<String> status) {
+    private void initTunnelVms(ArrayList<String> status) {
         for (VM vm : vms) {
             for (String output : status) {
                 if (output.contains(vm.getName() + " ")) {
@@ -74,7 +93,7 @@ public class VMUtils {
      * Initialiser les machines du réseau
      * @param status status vagrant
      */
-    private static void initNetworkVms(ArrayList<String> status) {
+    private void initNetworkVms(ArrayList<String> status) {
         ArrayList<String> vmIds = new ArrayList<>();
         for (VM vm : vms) vmIds.add(vm.getId());
         for (String output : status) {
@@ -95,7 +114,7 @@ public class VMUtils {
     /**
      * Obtenir les adresses IP associées aux adresses de chaque VM initialisée
      */
-    public static void getVMsAddresses() {
+    public void getVMsAddresses() {
         Map<String, Map<String,ArrayList<String>>> sshCommands = new HashMap<>();
         for (VM vm : vms) {
             execParallelTask(() -> {
@@ -138,7 +157,7 @@ public class VMUtils {
      * Exécuter une série de commandes en SSH sur la VM
      * @param vm machine virtuelle
      */
-    public static Map<String,ArrayList<String>> execSSH(VM vm, String... commands) {
+    public Map<String,ArrayList<String>> execSSH(VM vm, String... commands) {
         if (vm.getId() == null) {
             System.err.println("ERREUR : ID de " + vm.getName() + " irrécupérable.\r");
             System.exit(1);
@@ -163,7 +182,7 @@ public class VMUtils {
      * Exécuter une tâche de manière parallèle
      * @param runnable exécutable
      */
-    public static void execParallelTask(Runnable runnable) {
+    public void execParallelTask(Runnable runnable) {
         if (executor.isShutdown()) {
             executor = Executors.newFixedThreadPool(4);
             service = new ExecutorCompletionService<>(executor);
@@ -174,7 +193,7 @@ public class VMUtils {
     /**
      * Attendre que les tâches en cours se terminent
      */
-    public static void waitTasksToFinish() {
+    public void waitTasksToFinish() {
         while (!tasks.isEmpty())
             tasks.removeIf(Future::isDone);
         executor.shutdown();
@@ -182,7 +201,5 @@ public class VMUtils {
 
     // GETTERS //
 
-    public static ArrayList<VM> getVms() {
-        return vms;
-    }
+    public ArrayList<VM> getVms() { return vms; }
 }
